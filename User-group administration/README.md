@@ -198,4 +198,3 @@ Test access as different users:
 This setup demonstrates Linux user/group management and permission control using standard permissions (`chown`, `chmod`) and ACLs (`setfacl`). It ensures secure access control for a company’s project folders.
 
 Created on: October 20, 2025. Author: Adriel Maximus (with a little bit of grok to help my writing).
-```
