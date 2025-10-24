@@ -1,0 +1,220 @@
+# 🧾 Tutorial: Automating System Reports in Linux
+
+This tutorial explains how to create a **system monitoring script** in Bash that generates detailed reports containing information about **logged-in users, disk usage, memory consumption, and top processes**.
+Each report is **timestamped**, saved automatically in `/var/log`, and includes information about who generated it.
+
+✅ **Tested on:** Ubuntu 22.04, Debian 12, and WSL (Windows Subsystem for Linux).
+
+---
+
+## 🎯 Objective
+
+Automate the generation of system health reports containing:
+
+* Current user and logged-in sessions
+* Disk usage summary
+* Memory usage statistics
+* Top 10 memory-consuming processes
+* Timestamped report location
+
+Each execution creates a **new file** with a **unique datetime suffix**, e.g.:
+
+```
+/var/log/sys_report_2025-10-21_14-52-10.txt
+```
+
+---
+
+## 🧰 Prerequisites
+
+| Requirement | Description                                          |
+| ----------- | ---------------------------------------------------- |
+| OS          | Any Linux distribution (Ubuntu, Debian, CentOS, WSL) |
+| Privileges  | Root (recommended for saving in `/var/log`)          |
+| Tools       | `bash`, `ps`, `df`, `free`, `who`, `date`            |
+
+---
+
+## 📜 Script Overview
+
+### `sys_report.sh`
+
+```bash
+#!/bin/bash
+
+TIME=$(date +%F_%H-%M-%S)
+TO=/var/log/sys_report_$TIME.txt
+USER=$(whoami)
+USERL=$(who)
+process="ps"
+memory="free"
+disk="df"
+
+echo "===== SYSTEM REPORT =====" > "$TO"
+echo "$USER IN THE TIME $TIME MAKE THIS REPORT THAT SHOWS" >> "$TO"
+echo "=================================" >> "$TO"
+
+echo "USERS LOGGED IN AT $TIME:" >> "$TO"
+echo "$USERL" >> "$TO"
+echo "=================================" >> "$TO"
+
+echo -e "\n--- DISK USAGE ---" >> "$TO"
+$disk -h >> "$TO"
+
+echo -e "\n--- ACTIVE PROCESS ---" >> "$TO"
+$process aux --sort=-%mem | head -n 10 >> "$TO"
+
+echo -e "\n--- USE OF MEMORY ---" >> "$TO"
+$memory -h >> "$TO"
+
+echo -e "\nREPORT CREATED ON: $(date)" >> "$TO"
+echo "=================================" >> "$TO"
+
+echo "REPORT LOCATION: $TO"
+```
+
+---
+
+## 🧠 How It Works
+
+| Section             | Description                                                 |
+| ------------------- | ----------------------------------------------------------- |
+| `TIME`              | Stores the current date and time (formatted for filenames). |
+| `TO`                | Defines where the report will be saved.                     |
+| `USER`              | Captures the username of the person executing the script.   |
+| `USERL`             | Lists all logged-in users at that moment.                   |
+| `ps`, `df`, `free`  | Commands to show process, disk, and memory info.            |
+| `echo ... >> "$TO"` | Appends report content to the output file.                  |
+
+---
+
+## 🧾 Example Output
+
+**Sample file:** `/var/log/sys_report_2025-10-21_15-30-44.txt`
+
+```
+===== SYSTEM REPORT =====
+root IN THE TIME 2025-10-21_15-30-44 MAKE THIS REPORT THAT SHOWS
+=================================
+USERS LOGGED IN AT 2025-10-21_15-30-44:
+root     pts/0        2025-10-21 15:20 (10.0.2.15)
+=================================
+
+--- DISK USAGE ---
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1        30G   13G   15G  47% /
+
+--- ACTIVE PROCESS ---
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root       101  0.2  3.1  28000  1500 pts/0    Ss   15:00   0:00 bash
+root       105  0.1  2.8  32000  1400 pts/0    R+   15:31   0:00 ps aux
+
+--- USE OF MEMORY ---
+              total        used        free      shared  buff/cache   available
+Mem:           1992         450         980          15         561        1340
+Swap:          2048           0        2048
+
+REPORT CREATED ON: Tue Oct 21 15:31:00 UTC 2025
+=================================
+REPORT LOCATION: /var/log/sys_report_2025-10-21_15-30-44.txt
+```
+
+---
+
+## ⚙️ Installation and Usage
+
+1. **Create the script**
+
+   ```bash
+   sudo nano /usr/local/bin/sys_report.sh
+   ```
+
+2. **Paste the code** (above) and save.
+
+3. **Make it executable:**
+
+   ```bash
+   sudo chmod +x /usr/local/bin/sys_report.sh
+   ```
+
+4. **Run manually:**
+
+   ```bash
+   sudo sys_report.sh
+   ```
+
+5. **View the report:**
+
+   ```bash
+   cat /var/log/sys_report_2025-10-21_15-30-44.txt
+   ```
+
+---
+
+## 🕒 Automate with Cron
+
+To schedule automatic report generation every hour:
+
+```bash
+sudo crontab -e
+```
+
+Add:
+
+```cron
+0 * * * * /usr/local/bin/sys_report.sh
+```
+
+This will create a new timestamped report every hour.
+
+---
+
+## 🔒 Tips & Best Practices
+
+✅ **Secure logs:**
+
+```bash
+sudo chmod 600 /var/log/sys_report_*.txt
+sudo chown root:root /var/log/sys_report_*.txt
+```
+
+📈 **Monitor file size growth:**
+To prevent excessive logs, configure log rotation:
+
+```conf
+/var/log/sys_report_*.txt {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+}
+```
+
+💡 **Add extra features (optional):**
+
+* Include CPU load via `uptime`
+* Include network stats via `ip -s link`
+* Email report automatically with `mail` or `sendmail`
+
+---
+
+## 🧩 Troubleshooting
+
+| Issue             | Possible Cause           | Fix                                     |
+| ----------------- | ------------------------ | --------------------------------------- |
+| Permission denied | `/var/log` is restricted | Run script with `sudo`                  |
+| Empty report      | Commands missing         | Verify `ps`, `df`, `free` are installed |
+| Time not updating | Cached shell variable    | Run script again (it auto-updates)      |
+
+---
+
+## 🧾 Conclusion
+
+This script provides a quick and automated way to monitor **system health** in real-time, generating **timestamped reports** that can be reviewed or archived for auditing purposes.
+It’s simple, portable, and easily extendable for servers, VMs, or WSL environments.
+
+---
+
+📅 **Created on:** October 21, 2025
+👨‍💻 **Author:** Adriel Maximus
